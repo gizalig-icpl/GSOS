@@ -1,0 +1,47 @@
+version: "3.7"
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  invinsense-db:
+  invinsense-code:
+
+services:
+  invinsensedb:
+    command: mysqld --sql_mode="NO_ENGINE_SUBSTITUTION"
+    environment:
+      - MYSQL_ROOT_PASSWORD=redhat
+      - MYSQL_DATABASE=invinsense
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=redhat
+    image: mariadb:10.5
+    networks:
+      - backend
+    volumes:
+      - "invinsense-db:/var/lib/mysql"
+    ports:
+      - 3315:3306
+
+  invinsense:
+    image: infopercept/gsos_dev:v3.0
+    restart: unless-stopped
+    depends_on:
+      - invinsensedb
+    volumes:
+      - invinsense-code:/var/www/html
+    networks:
+      - frontend
+      - backend
+    ports:
+      - 9015:80
+
+  simplerisk:
+    image: infopercept/riskmanagement_dev:latest
+    restart: unless-stopped
+    ports:
+      - 4415:443
+    networks:
+      - frontend
+      - backend

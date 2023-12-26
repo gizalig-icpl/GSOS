@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Stop Current Containers') {
+            steps {
+                echo 'Stopped running containers.'
+                sh 'docker-compose down'
+            }
+        }
+
+        stage('Pull Latest Images') {
+            steps {
+                echo 'Pulling latest images from Docker Hub...'
+                sh 'docker pull infopercept/gsos_dev:latest'
+                echo 'Image infopercept/gsos_dev:latest fetched from Docker Hub.'
+
+                sh 'docker pull infopercept/riskmanagement_dev:latest'
+                echo 'Image infopercept/riskmanagement_dev:latest fetched from Docker Hub.'
+            }
+        }
+
+        stage('Remove Dangling Images') {
+            steps {
+                script {
+                echo 'Checking for dangling images...'
+                def danglingImages = sh(script: 'docker images -f "dangling=true" -q', returnStdout: true).trim()
+
+                if (danglingImages) {
+                    echo "Forcibly removing dangling images..."
+                    try {
+                        sh "docker rmi ${danglingImages}"
+                        echo 'Dangling images removed.'
+                    } catch (Exception e) {
+                        echo "Error removing dangling images: ${e.message}"
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                } else {
+                echo 'No dangling images found.'
+                    }
+                }
+            }
+        }
+
+        stage('Run') {
+            steps {
+                echo 'Starting containers...'
+                sh 'docker-compose up -d'
+                echo 'Containers are running.'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deployment in progress...'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    try {
+                        def scannerHome = tool 'SonarQubeScanner'
+                        withSonarQubeEnv() {
+                            sh "${scannerHome}/bin/sonar-scanner"
+                        }
+                    } catch (Exception e) {
+                        currentBuild.result = 'UNSTABLE'
+                        error("SonarQube analysis failed: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+}

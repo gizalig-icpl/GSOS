@@ -1,0 +1,80 @@
+pipeline {
+    agent any
+
+    environment {
+        COMPOSE_HTTP_TIMEOUT = '360' // Set a longer timeout (in seconds)
+    }
+
+    stages {
+        stage('SCM') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    try {
+                        sh 'docker-compose down'
+                    } catch (Exception e) {
+                        currentBuild.result = 'UNSTABLE'
+                        error("Failed to stop Docker Compose: ${e.message}")
+                    }
+                }
+                echo 'Building...'
+            }
+        }
+
+        stage('Run') {
+            steps {
+                script {
+                    try {
+                        sh 'docker-compose up -d'
+                    } catch (Exception e) {
+                        currentBuild.result = 'UNSTABLE'
+                        error("Failed to start Docker Compose: ${e.message}")
+                    }
+                }
+                echo 'Running...'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying....'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    try {
+                        def scannerHome = tool 'SonarQubeScanner'
+                        withSonarQubeEnv() {
+                            sh "${scannerHome}/bin/sonar-scanner"
+                        }
+                    } catch (Exception e) {
+                        currentBuild.result = 'UNSTABLE'
+                        error("SonarQube analysis failed: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "The pipeline has failed."
+            // You can add further actions here in case of failure
+        }
+        unstable {
+            echo "The pipeline is unstable."
+            // You can add further actions here in case of instability
+        }
+        success {
+            echo "The pipeline has succeeded."
+            // You can add further actions here in case of success
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.27",
+        "phpmailer/phpmailer": "^6.7",
+        "dompdf/dompdf": "^2.0",
+        "stevenmaguire/oauth2-keycloak": "^4.0",
+        "aws/aws-sdk-php": "^3.273",
+        "dragonmantank/cron-expression": "^3.3"
+      }
+   }
