@@ -1,0 +1,37 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Sonarqube') {
+            environment {
+                scannerHome = tool 'SonarQube'
+            }
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh "${scannerHome}/bin/sonar-scanner"
+                }
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    try {
+                        sh 'docker-compose down'
+                    } catch (Exception e) {
+                        echo "Error while stopping existing containers: ${e.getMessage()}"
+                    }
+                    sh 'docker-compose up -d'
+                    echo 'Building...'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying....'
+            }
+        }
+    }
+}
